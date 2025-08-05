@@ -17,14 +17,31 @@ const timeSlots = Array.from({ length: 48 }, (_, i) => {
 
 const showModal = ref(false);
 const selectedTime = ref("");
+const editData = ref<ScheduleItem | null>(null);
 
 function openModal(time: string) {
   selectedTime.value = time;
+  editData.value = null; // Reset edit data
   showModal.value = true;
 }
 
-function handleSubmit(item: Omit<ScheduleItem, "id">) {
-  scheduleStore.addSchedule(item);
+function openEditModal(item: ScheduleItem) {
+  editData.value = item;
+  showModal.value = true;
+}
+
+function handleSubmit(item: ScheduleItem) {
+  const idx = scheduleStore.schedules.findIndex((s) => s.id === item.id);
+
+  if (idx !== -1) {
+    scheduleStore.schedules[idx] = item;
+  } else {
+    scheduleStore.addSchedule(item);
+  }
+}
+
+function handleDelete(id: number) {
+  scheduleStore.removeSchedule(id);
 }
 
 function getTop(start: string) {
@@ -59,6 +76,7 @@ function getHeight(item: any) {
         height: getHeight(item) + 'px',
         backgroundColor: item.color,
       }"
+      @click.stop="openEditModal(item)"
     >
       {{ item.title }}
     </div>
@@ -66,7 +84,9 @@ function getHeight(item: any) {
     <ScheduleModal
       v-model="showModal"
       :defaultTime="selectedTime"
+      :editData="editData"
       @submit="handleSubmit"
+      @delete="handleDelete"
     />
   </div>
 </template>

@@ -1,23 +1,36 @@
 <script setup lang="ts">
+import { ScheduleItem } from "@/stores/schedule/useScheduleStore";
 import { ref, watch, onMounted } from "vue";
-import { useScheduleStore } from "@/stores/schedule/useScheduleStore";
 
 const props = defineProps<{
   modelValue: boolean;
   defaultTime: string;
+  editData?: ScheduleItem | null;
 }>();
 
-const emit = defineEmits(["update:modelValue", "submit"]);
+const emit = defineEmits(["update:modelValue", "submit", "delete"]);
 
 const show = ref(props.modelValue);
-const scheduleStore = useScheduleStore();
 
 const form = ref({
   title: "",
-  start: props.defaultTime || "",
-  end: "",
+  start: props.defaultTime || "00:00",
+  end: "00:30",
   color: "#18a058",
 });
+
+function submit() {
+  if (!form.value.title || !form.value.start || !form.value.end) return;
+  emit("submit", { ...form.value });
+  show.value = false;
+}
+
+function deleteItem() {
+  if (props.editData) {
+    emit("delete", props.editData.id);
+    show.value = false;
+  }
+}
 
 watch(
   () => props.modelValue,
@@ -29,15 +42,29 @@ watch(show, (val) => emit("update:modelValue", val));
 watch(
   () => props.defaultTime,
   (newTime) => {
-    form.value.start = newTime || "";
+    if (/^\d{2}:\d{2}$/.test(newTime)) {
+      form.value.start = newTime;
+    }
+    form.value.start = newTime;
   }
 );
 
-function submit() {
-  if (!form.value.title || !form.value.start || !form.value.end) return;
-  scheduleStore.addSchedule(form.value);
-  show.value = false;
-}
+watch(
+  () => props.editData,
+  (item) => {
+    if (item) {
+      form.value = { ...item };
+    } else {
+      form.value = {
+        title: "",
+        start: props.defaultTime || "00:00",
+        end: "00:30",
+        color: "#18a058",
+      };
+    }
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   if (props.defaultTime) {
@@ -80,7 +107,10 @@ onMounted(() => {
     </n-form>
     <template #action>
       <n-button @click="show = false">취소</n-button>
-      <n-button type="primary" @click="submit">등록</n-button>
+      <n-button type="error" v-if="props.editData" @click="deleteItem"
+        >삭제</n-button
+      >
+      <n-button type="primary" @click="submit">저장</n-button>
     </template>
   </n-modal>
 </template>
