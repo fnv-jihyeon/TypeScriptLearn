@@ -2,8 +2,15 @@
 import { ref, onMounted } from "vue";
 import dayjs from "dayjs";
 
+import { useSessionStore } from "@/stores/useSessionStore";
+
+const sessionStore = useSessionStore();
 const currentDate = dayjs().format("YYYY-MM-DD (ddd)");
 const currentTime = ref(dayjs().format("HH:mm:ss"));
+
+async function logout() {
+  await sessionStore.logout();
+}
 
 onMounted(() => {
   setInterval(() => {
@@ -15,7 +22,13 @@ onMounted(() => {
 <template>
   <header class="top-bar">
     <div class="left">📅 {{ currentDate }}</div>
-    <div class="right">{{ currentTime }}</div>
+    <div class="right">
+      <div v-if="sessionStore.user">
+        <span>{{ sessionStore.user.username }}</span>
+        <n-button size="small" @click="logout">로그아웃</n-button>
+      </div>
+      {{ currentTime }}
+    </div>
   </header>
 </template>
 
