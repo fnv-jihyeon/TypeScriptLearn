@@ -4,44 +4,56 @@ import { useRouter } from "vue-router";
 import { useSessionStore } from "@/stores/useSessionStore";
 import type { ERROR_CODES } from "@shared/constants/errorCodes";
 import { ERROR_MESSAGES } from "@/constants/errorMessageMap";
+import { EyeOutline, EyeOffOutline } from "@vicons/ionicons5";
+import { useMessage } from "naive-ui";
 
 const username = ref("");
 const password = ref("");
 const router = useRouter();
 const sessionStore = useSessionStore();
+const message = useMessage();
+const isLoading = ref(false);
+const showPassword = ref(false);
 
 async function login() {
   if (!username.value || !password.value) {
-    alert("아이디와 비밀번호를 입력해주세요.");
+    message.error("아이디와 비밀번호를 입력해주세요.");
     return;
   }
 
+  isLoading.value = true;
+
   try {
     await sessionStore.login(username.value, password.value);
-    router.push("/");
+    message.success("로그인 성공!");
+    router.push("/schedule");
   } catch (error: any) {
-    const code = error.response?.data?.errorCode as ERROR_CODES;
-    const message = ERROR_MESSAGES[code] || "로그인에 실패했습니다.";
-    alert(message);
+    const code = (error?.message as ERROR_CODES) ?? "UNKNOWN_ERROR";
+    const msg = ERROR_MESSAGES[code] ?? "로그인에 실패했습니다.";
+    message.error(msg);
   } finally {
-    // 로그인 후 항상 username과 password를 초기화
+    isLoading.value = false;
     username.value = "";
     password.value = "";
   }
 }
+
+const goToSignup = () => {
+  router.push("/signup");
+};
 </script>
 
 <template>
   <div class="login-container">
     <n-card title="로그인" class="login-card">
-      <n-input v-model:value="username" placeholder="아이디" class="mb-2" />
-      <n-input
-        v-model:value="password"
-        type="password"
-        placeholder="비밀번호"
-        class="mb-4"
-      />
-      <n-button type="primary" block @click="login">로그인</n-button>
+      <n-input v-model:value="username" placeholder="아이디" autocomplete="off" class="mb-2" />
+      <n-input v-model:value="password" :type="showPassword ? 'text' : 'password'" placeholder="비밀번호" autocomplete="off" class="mb-4">
+        <template #suffix>
+          <n-icon :component="showPassword ? EyeOffOutline : EyeOutline" style="cursor: pointer" @click="showPassword = !showPassword" />
+        </template>
+      </n-input>
+      <n-button type="primary" block :loading="isLoading" @click="login">로그인</n-button>
+      <n-button secondary block @click="goToSignup"> 회원가입 </n-button>
     </n-card>
   </div>
 </template>

@@ -1,17 +1,17 @@
 import { Request, Response } from "express";
+import { userDB, User } from "@/data/fakeUserDB";
 import {
   AuthErrorCode,
   GeneralErrorCode,
   ValidationErrorCode,
 } from "@shared/constants/errorCodes";
 
-interface User {
-  username: string;
-  email: string;
-  password: string;
-}
-
-const fakeDB = new Map<string, User>();
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: 인증 관련 API
+ */
 
 /**
  * @swagger
@@ -42,7 +42,7 @@ const fakeDB = new Map<string, User>();
  *                 example: password123
  *     responses:
  *       200:
- *         description: 성공 또는 실패 여부
+ *         description: 회원가입 결과
  *         content:
  *           application/json:
  *             schema:
@@ -50,28 +50,28 @@ const fakeDB = new Map<string, User>();
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 user:
- *                   type: object
- *                   required:
- *                     - username
- *                     - email
- *                   properties:
- *                     username:
- *                       type: string
- *                       example: user123
- *                     email:
- *                       type: string
- *                       example: user123@example.com
+ *                   $ref: '#/components/schemas/User'
  *                 errorCode:
  *                   type: string
  *                   nullable: true
- *                   example: USER_ALREADY_EXISTS
- * @param req
- * @param res
- * @returns
+ *       400:
+ *         description: 필수 입력 누락
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 errorCode:
+ *                   type: string
+ *                   example: REQUIRED_FIELD_MISSING
  */
 export const signup = (req: Request, res: Response) => {
+  console.log("req.body:", req.body);
+
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
@@ -81,24 +81,29 @@ export const signup = (req: Request, res: Response) => {
     });
   }
 
-  for (const user of fakeDB.values()) {
-    if (user.username === username) {
-      return res.status(200).json({
-        success: false,
-        errorCode: AuthErrorCode.USER_ALREADY_EXISTS,
-      });
-    }
+  const isUsernameExists = [...userDB.values()].some(
+    (user) => user.username === username
+  );
+  const isEmailExists = [...userDB.values()].some(
+    (user) => user.email === email
+  );
 
-    if (user.email === email) {
-      return res.status(200).json({
-        success: false,
-        errorCode: AuthErrorCode.EMAIL_ALREADY_REGISTERED,
-      });
-    }
+  if (isUsernameExists) {
+    return res.status(200).json({
+      success: false,
+      errorCode: AuthErrorCode.USER_ALREADY_EXISTS,
+    });
+  }
+
+  if (isEmailExists) {
+    return res.status(200).json({
+      success: false,
+      errorCode: AuthErrorCode.EMAIL_ALREADY_REGISTERED,
+    });
   }
 
   const newUser: User = { username, email, password };
-  fakeDB.set(username, newUser);
+  userDB.set(username, newUser);
 
   const { password: _, ...safeUser } = newUser; // 비밀번호 제외
   console.log("새로운 사용자 등록:", safeUser);
@@ -134,7 +139,7 @@ export const signup = (req: Request, res: Response) => {
  *                 example: password123
  *     responses:
  *       200:
- *         description: 성공 또는 실패 여부
+ *         description: 로그인 성공 또는 실패
  *         content:
  *           application/json:
  *             schema:
@@ -142,22 +147,25 @@ export const signup = (req: Request, res: Response) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 user:
- *                   type: object
- *                   properties:
- *                     username:
- *                       type: string
- *                     email:
- *                       type: string
+ *                   $ref: '#/components/schemas/User'
  *                 errorCode:
  *                   type: string
  *                   nullable: true
  *                   example: INVALID_CREDENTIALS
- *
- * @param req
- * @param res
- * @returns
+ *       400:
+ *         description: 필수 입력 누락
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 errorCode:
+ *                   type: string
+ *                   example: INVALID_CREDENTIALS
  */
 export const login = (req: Request, res: Response) => {
   const { username, password } = req.body;
@@ -169,7 +177,7 @@ export const login = (req: Request, res: Response) => {
     });
   }
 
-  const user = [...fakeDB.values()].find((user) => user.username === username);
+  const user = [...userDB.values()].find((user) => user.username === username);
 
   if (!user || user.password !== password) {
     return res.status(200).json({
@@ -198,7 +206,7 @@ export const login = (req: Request, res: Response) => {
  *     tags: [Auth]
  *     responses:
  *       200:
- *         description: 성공 또는 실패 여부
+ *         description: 로그아웃 성공
  *         content:
  *           application/json:
  *             schema:
@@ -207,12 +215,19 @@ export const login = (req: Request, res: Response) => {
  *                 success:
  *                   type: boolean
  *                   example: true
+ *       500:
+ *         description: 서버 오류로 인한 실패
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
  *                 errorCode:
  *                   type: string
- *                   nullable: true
  *                   example: INTERNAL_SERVER_ERROR
- * @param req
- * @param res
  */
 export const logout = (req: Request, res: Response) => {
   req.session.destroy((error) => {
@@ -239,7 +254,7 @@ export const logout = (req: Request, res: Response) => {
  *     tags: [Auth]
  *     responses:
  *       200:
- *         description: 성공 또는 실패 여부
+ *         description: 세션 유효 여부 반환
  *         content:
  *           application/json:
  *             schema:
@@ -249,20 +264,11 @@ export const logout = (req: Request, res: Response) => {
  *                   type: boolean
  *                   example: true
  *                 user:
- *                   type: object
- *                   properties:
- *                     username:
- *                       type: string
- *                     email:
- *                       type: string
+ *                   $ref: '#/components/schemas/User'
  *                 errorCode:
  *                   type: string
  *                   nullable: true
  *                   example: SESSION_EXPIRED
- *
- * @param req
- * @param res
- * @returns
  */
 export const checkSession = (req: Request, res: Response) => {
   if (req.session.user) {

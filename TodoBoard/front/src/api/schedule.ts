@@ -1,16 +1,35 @@
-import type { ScheduleItem } from "@/stores/schedule/useScheduleStore";
+import axios from "axios";
+import type {
+  schedule,
+  scheduleCreateInput,
+  scheduleUpdateInput,
+  scheduleListResponse,
+  scheduleCreateResponse,
+  scheduleUpdateResponse,
+  scheduleDeleteResponse,
+  scheduleByIdResponse,
+} from "@shared/types/schedule";
 
-const STORAGE_KEY = 'schedules'
+const api = axios.create({
+  baseURL: "/api",
+  withCredentials: true, // 쿠키를 포함한 요청을 위해 설정
+});
 
-export function fetchSchedules(): ScheduleItem[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY)
-    return data ? JSON.parse(data) : []
-  } catch {
-    return []
-  }
-}
-
-export function saveSchedules(schedules: ScheduleItem[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules))
-}
+export const scheduleAPI = {
+  // 전체 일정 리스트 조회
+  getList() {
+    return api.get<scheduleListResponse>("/schedule");
+  },
+  create(data: scheduleCreateInput) {
+    return api.post<scheduleCreateResponse>("/schedule", data);
+  },
+  update(id: string | number, data: scheduleUpdateInput) {
+    return api.put<scheduleUpdateResponse>(`/schedule/${id}`, data);
+  },
+  remove(id: string | number) {
+    return api.delete<scheduleDeleteResponse>(`/schedule/${id}`);
+  },
+  getById(id: string | number) {
+    return api.get<scheduleByIdResponse>(`/schedule/${id}`);
+  },
+};

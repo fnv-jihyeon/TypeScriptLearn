@@ -1,28 +1,22 @@
-import axios from 'axios';
+import axios from "axios";
+import { userLoginInput, userSignupInput, signupResponse, loginResponse, logoutResponse, sessionResponse } from "@shared/types/user";
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
+  baseURL: "/api",
   withCredentials: true, // 쿠키를 포함한 요청을 위해 설정
 });
 
-export async function login(username: string, password: string) {
-  return await api.post('/auth/login', { username, password });
-}
-
-export async function logout() {
-  return await api.post('/auth/logout');
-}
-
-export async function checkSession() {
-  return await api.get('/auth/session');
-}
-
-export async function signup(username: string, email: string, password: string) {
-  return await api.post('/auth/signup', { username, email, password });
-}
-
-export async function withdraw() {
-  return await api.delete('/auth/withdraw');
-}
-
-export default api;
+export const authApi = {
+  signup(input: userSignupInput) {
+    return api.post<signupResponse>("/auth/signup", input);
+  },
+  login(input: userLoginInput) {
+    return api.post<loginResponse>("/auth/login", input);
+  },
+  logout() {
+    return api.post<logoutResponse>("/auth/logout");
+  },
+  checkSession() {
+    return api.get<sessionResponse>("/auth/session");
+  },
+};

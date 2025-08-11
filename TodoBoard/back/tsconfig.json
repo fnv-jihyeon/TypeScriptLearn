@@ -1,4 +1,4 @@
- {
+{
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
@@ -6,18 +6,26 @@
     "rootDir": "../",
     "strict": true,
     "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["../shared/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@shared/*": [
+        "../shared/*"
+      ]
     }
   },
   "include": [
-    "src", 
-    "../shared", 
-    "src/**/*.ts", 
-    "src/**/*.d.ts", 
-    "src/types/**/*.d.ts"
+    "src",
+    "../shared",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/types/**/*.d.ts",
+    "../shared"
   ]
 }

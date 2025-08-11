@@ -1,11 +1,4 @@
-<script setup lang="ts">
-import {
-  NConfigProvider,
-  NDialogProvider,
-  NNotificationProvider,
-  NMessageProvider,
-} from "naive-ui";
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <n-config-provider>
