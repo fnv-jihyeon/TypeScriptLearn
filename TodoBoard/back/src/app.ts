@@ -25,8 +25,8 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "default_secret",
     resave: false,
-    saveUninitialized: true,
-    rolling: false,
+    saveUninitialized: false,
+    rolling: true,
     name: "sid",
     cookie: {
       maxAge: 1000 * 60 * 30, // 30분

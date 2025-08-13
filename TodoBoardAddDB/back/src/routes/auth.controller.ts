@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 import { userDB, User } from "@/data/fakeUserDB";
 import { AuthErrorCode, GeneralErrorCode, ValidationErrorCode } from "@shared/constants/errorCodes";
 
@@ -65,10 +67,10 @@ import { AuthErrorCode, GeneralErrorCode, ValidationErrorCode } from "@shared/co
  *                   type: string
  *                   example: REQUIRED_FIELD_MISSING
  */
-export const signup = (req: Request, res: Response) => {
+export const signup = async (req: Request, res: Response) => {
   console.log("req.body:", req.body);
 
-  const { username, email, password } = req.body;
+  const { username, email, password } = req.body as { username?: string; email?: string; password?: string };
 
   if (!username || !email || !password) {
     return res.status(400).json({
@@ -77,54 +79,69 @@ export const signup = (req: Request, res: Response) => {
     });
   }
 
-  const isUsernameExists = [...userDB.values()].some((user) => user.username === username);
-  const isEmailExists = [...userDB.values()].some((user) => user.email === email);
-
-  if (isUsernameExists) {
-    return res.status(200).json({
-      success: false,
-      errorCode: AuthErrorCode.USER_ALREADY_EXISTS,
-    });
-  }
-
-  if (isEmailExists) {
-    return res.status(200).json({
-      success: false,
-      errorCode: AuthErrorCode.EMAIL_ALREADY_REGISTERED,
-    });
-  }
-
-  const newUser: User = { username, email, password };
-  userDB.set(username, newUser);
-
-  const { password: _, ...safeUser } = newUser; // 비밀번호 제외
-  console.log("새로운 사용자 등록:", safeUser);
-
-  req.session.regenerate((err) => {
-    if (err) {
-      console.error("세션 초기화 실패:", err);
-      return res.status(500).json({
-        success: false,
-        errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR,
-      });
+  try {
+    // 중복 체크(선제)
+    const [byUsername, byEmail] = await Promise.all([prisma.user.findUnique({ where: { username } }), prisma.user.findUnique({ where: { email } })]);
+    if (byUsername) {
+      return res.status(200).json({ success: false, errorCode: AuthErrorCode.USER_ALREADY_EXISTS });
+    }
+    if (byEmail) {
+      return res.status(200).json({ success: false, errorCode: AuthErrorCode.EMAIL_ALREADY_REGISTERED });
     }
 
-    req.session.user = { id: username, username, email }; // 세션에 사용자 정보 저장
-    req.session.save((saveErr) => {
-      if (saveErr) {
-        console.error("세션 저장 실패:", saveErr);
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashed,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    console.log("새로운 사용자 등록:", user);
+
+    req.session.regenerate((err) => {
+      if (err) {
+        console.error("세션 초기화 실패:", err);
         return res.status(500).json({
           success: false,
           errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR,
         });
       }
-    });
 
-    return res.status(200).json({
-      success: true,
-      user: safeUser,
+      req.session.user = { id: user.id, username: user.username, email: user.email };
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("세션 저장 실패:", saveErr);
+          return res.status(500).json({
+            success: false,
+            errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR,
+          });
+        }
+        return res.status(200).json({ success: true, user });
+      });
     });
-  });
+  } catch (e: any) {
+    // Prisma unique 오류 방어(P2002)
+    if (e?.code === "P2002") {
+      const target: string = Array.isArray(e?.meta?.target) ? e.meta.target.join(",") : String(e?.meta?.target ?? "");
+      if (target.includes("username")) {
+        return res.status(200).json({ success: false, errorCode: AuthErrorCode.USER_ALREADY_EXISTS });
+      }
+      if (target.includes("email")) {
+        return res.status(200).json({ success: false, errorCode: AuthErrorCode.EMAIL_ALREADY_REGISTERED });
+      }
+      return res.status(200).json({ success: false, errorCode: AuthErrorCode.USER_ALREADY_EXISTS });
+    }
+    console.error(e);
+    return res.status(500).json({ success: false, errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR });
+  }
 };
 
 /**
@@ -180,8 +197,8 @@ export const signup = (req: Request, res: Response) => {
  *                   type: string
  *                   example: INVALID_CREDENTIALS
  */
-export const login = (req: Request, res: Response) => {
-  const { username, password } = req.body;
+export const login = async (req: Request, res: Response) => {
+  const { username, password } = req.body as { username?: string; password?: string };
 
   if (!username || !password) {
     return res.status(400).json({
@@ -190,48 +207,38 @@ export const login = (req: Request, res: Response) => {
     });
   }
 
-  const user = [...userDB.values()].find((user) => user.username === username);
+  try {
+    const user = await prisma.user.findUnique({ where: { username } });
 
-  if (!user || user.password !== password) {
-    return res.status(200).json({
-      success: false,
-      errorCode: AuthErrorCode.INVALID_CREDENTIALS,
-    });
-  }
-
-  req.session.regenerate((err) => {
-    if (err) {
-      console.error("session regenerate error:", err);
-      return res.status(500).json({
-        success: false,
-        errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR,
-      });
+    if (!user) {
+      return res.status(200).json({ success: false, errorCode: AuthErrorCode.INVALID_CREDENTIALS });
     }
 
-    // userSession 형태로 맞춰 저장 (id가 없다면 username을 id로 임시 사용)
-    const sessionUser = {
-      id: user.username,
-      username: user.username,
-      email: user.email,
-    };
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) {
+      return res.status(200).json({ success: false, errorCode: AuthErrorCode.INVALID_CREDENTIALS });
+    }
 
-    req.session.user = sessionUser;
+    const sessionUser = { id: user.id, username: user.username, email: user.email };
 
-    // 4) 저장 후 응답 (Set-Cookie 보장)
-    req.session.save((saveErr) => {
-      if (saveErr) {
-        console.error("session save error:", saveErr);
-        return res.status(500).json({
-          success: false,
-          errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR,
-        });
+    req.session.regenerate((err) => {
+      if (err) {
+        console.error("session regenerate error:", err);
+        return res.status(500).json({ success: false, errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR });
       }
-      return res.status(200).json({
-        success: true,
-        user: sessionUser,
+      req.session.user = sessionUser;
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("session save error:", saveErr);
+          return res.status(500).json({ success: false, errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR });
+        }
+        return res.status(200).json({ success: true, user: sessionUser });
       });
     });
-  });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR });
+  }
 };
 
 /**
@@ -269,16 +276,10 @@ export const login = (req: Request, res: Response) => {
 export const logout = (req: Request, res: Response) => {
   req.session.destroy((error) => {
     if (error) {
-      return res.status(500).json({
-        success: false,
-        errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR,
-      });
+      return res.status(500).json({ success: false, errorCode: GeneralErrorCode.INTERNAL_SERVER_ERROR });
     }
-
-    res.clearCookie("connect.sid"); // 세션 쿠키 삭제
-    return res.status(200).json({
-      success: true,
-    });
+    res.clearCookie("sid"); // 쿠키 이름이 다르면 맞춰 변경
+    return res.status(200).json({ success: true });
   });
 };
 
@@ -309,14 +310,7 @@ export const logout = (req: Request, res: Response) => {
  */
 export const checkSession = (req: Request, res: Response) => {
   if (req.session.user) {
-    return res.status(200).json({
-      success: true,
-      user: req.session.user,
-    });
+    return res.status(200).json({ success: true, user: req.session.user });
   }
-
-  return res.status(200).json({
-    success: false,
-    errorCode: AuthErrorCode.SESSION_EXPIRED,
-  });
+  return res.status(200).json({ success: false, errorCode: AuthErrorCode.SESSION_EXPIRED });
 };
