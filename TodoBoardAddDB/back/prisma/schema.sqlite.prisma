@@ -25,13 +25,13 @@ model User {
 model Schedule {
   id        String      @id @default(cuid())
   title     String
-  start     String      //  "HH:mm"
-  end       String      //  "HH:mm"
+  startMin  Int         //  "0~1440"
+  endMin    Int         //  "startMin < endMin"
   color     String
   userId    String
   user      User        @relation(fields: [userId], references: [id])
   createdAt  DateTime   @default(now())  
-  udpatedAt  DateTime   @updatedAt
+  updatedAt  DateTime   @updatedAt
 
-  @@index([userId, start])
+  @@index([userId, startMin, endMin])
 }

@@ -1,13 +1,9 @@
 import { defineStore } from "pinia";
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { scheduleAPI } from "@/api/schedule";
+import { toMinutes } from "@/utils/time";
 import type { ERROR_CODES } from "@shared/constants/errorCodes";
 import type { schedule, scheduleCreateInput, scheduleUpdateInput } from "@shared/types/schedule";
-
-function toMinutes(hhmm: string): number {
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-}
 
 function errorCodeFrom(e: any, fallback: ERROR_CODES): ERROR_CODES {
   return (e?.response?.data?.errorCode || e?.data?.errorCode || fallback) as ERROR_CODES;
@@ -45,24 +41,6 @@ export const useScheduleStore = defineStore("schedule", () => {
   // 단일 일정 조회(Store  내 캐시)
   function getSchedulesById(id: string | number): schedule | undefined {
     return schedules.value.find((schedule) => schedule.id === id);
-  }
-
-  // 단일 일정 조회(서버로 부터 직접)
-  async function getScheduleByIdFromServer(id: string | number): Promise<schedule | null> {
-    isLoading.value = true;
-    try {
-      const { data } = await scheduleAPI.getById(id);
-      if (!data.success) {
-        throw new Error(data.errorCode as ERROR_CODES);
-      }
-      isLoaded.value = true;
-      return data.schedule;
-    } catch (error: any) {
-      console.error("Failed to fetch schedule by ID:", error);
-      throw new Error(errorCodeFrom(error, "SCHEDULE_NOT_FOUND" as ERROR_CODES));
-    } finally {
-      isLoading.value = false;
-    }
   }
 
   // 일정 등록

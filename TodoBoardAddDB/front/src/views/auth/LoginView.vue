@@ -45,14 +45,14 @@ const goToSignup = () => {
 
 <template>
   <div class="login-container">
-    <n-card title="로그인" class="login-card">
-      <n-input v-model:value="username" placeholder="아이디" autocomplete="off" class="mb-2" />
-      <n-input v-model:value="password" :type="showPassword ? 'text' : 'password'" placeholder="비밀번호" autocomplete="off" class="mb-4">
+    <n-card title="로그인" class="login-card" data-cy="login-card">
+      <n-input v-model:value="username" placeholder="아이디" autocomplete="off" class="mb-2" :input-props="{ 'data-cy': 'username' }" />
+      <n-input v-model:value="password" :type="showPassword ? 'text' : 'password'" placeholder="비밀번호" autocomplete="off" class="mb-4" :input-props="{ 'data-cy': 'password' }">
         <template #suffix>
           <n-icon :component="showPassword ? EyeOffOutline : EyeOutline" style="cursor: pointer" @click="showPassword = !showPassword" />
         </template>
       </n-input>
-      <n-button type="primary" block :loading="isLoading" @click="login">로그인</n-button>
+      <n-button type="primary" block :loading="isLoading" @click="login" data-cy="login-submit">로그인</n-button>
       <n-button secondary block @click="goToSignup"> 회원가입 </n-button>
     </n-card>
   </div>

@@ -1,10 +1,5 @@
 import express from "express";
-import {
-  getSchedule,
-  saveSchedule,
-  updateSchedule,
-  deleteSchedule,
-} from "./schedule.controller";
+import { getSchedule, saveSchedule, updateSchedule, deleteSchedule } from "./schedule.controller";
 
 const router = express.Router();
 
@@ -24,7 +19,7 @@ router.post("/", saveSchedule);
  * @route PATCH /api/schedules
  * @desc 기존 일정 수정
  */
-router.put("/:id", updateSchedule);
+router.patch("/:id", updateSchedule);
 
 /**
  * @route DELETE /api/schedules/:id

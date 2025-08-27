@@ -80,7 +80,7 @@ setupSwagger(app);
 
 // api 라우트 설정
 app.use("/api/auth", authRoutes);
-app.use("/api/schedule", scheduleRoutes);
+app.use("/api/schedules", scheduleRoutes);
 
 // 세션 테스트
 app.get("/session-test", (req, res) => {

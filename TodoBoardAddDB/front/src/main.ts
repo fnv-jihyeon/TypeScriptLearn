@@ -3,6 +3,9 @@ import { createPinia } from "pinia";
 import App from "./App.vue";
 import router from "./router";
 import { useSessionStore } from "@/stores/useSessionStore";
+import { installHttpIntercedptors } from "@/plugin/http-interceptors";
+
+installHttpIntercedptors();
 
 const app = createApp(App);
 app.use(createPinia());

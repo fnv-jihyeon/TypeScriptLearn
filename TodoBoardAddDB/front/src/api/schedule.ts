@@ -1,4 +1,4 @@
-import axios from "axios";
+import { api } from "@/lib/api";
 import type {
   schedule,
   scheduleCreateInput,
@@ -7,13 +7,8 @@ import type {
   scheduleCreateResponse,
   scheduleUpdateResponse,
   scheduleDeleteResponse,
-  scheduleByIdResponse,
+  //scheduleByIdResponse,
 } from "@shared/types/schedule";
-
-const api = axios.create({
-  baseURL: "/api",
-  withCredentials: true, // 쿠키를 포함한 요청을 위해 설정
-});
 
 export const scheduleAPI = {
   // 전체 일정 리스트 조회
@@ -29,7 +24,7 @@ export const scheduleAPI = {
   remove(id: string | number) {
     return api.delete<scheduleDeleteResponse>(`/schedule/${id}`);
   },
-  getById(id: string | number) {
-    return api.get<scheduleByIdResponse>(`/schedule/${id}`);
-  },
+  // getById(id: string | number) {
+  //   return api.get<scheduleByIdResponse>(`/schedule/${id}`);
+  // },
 };

@@ -34,6 +34,12 @@
     "src/**/*.vue",
     "../shared",
     "vite-env.d.ts",
-    "shims-vue.d.ts"
+    "shims-vue.d.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "cypress"
   ]
 }

@@ -15,15 +15,18 @@ export const ERROR_MESSAGES: Record<ERROR_CODES, string> = {
   [ValidationErrorCode.PASSWORD_TOO_SHORT]: "비밀번호는 최소 8자 이상이어야 합니다.",
 
   // 일정 관련
-  [ScheduleErrorCode.SCHEDULE_LIST_NOT_FOUND]: "일정 목록을 찾을 수 없습니다.",
-  [ScheduleErrorCode.SCHEDULE_CREATION_FAILED]: "일정 등록에 실패했습니다.",
-  [ScheduleErrorCode.SCHEDULE_UPDATE_FAILED]: "일정 수정에 실패했습니다.",
-  [ScheduleErrorCode.SCHEDULE_DELETION_FAILED]: "일정 삭제에 실패했습니다.",
-  [ScheduleErrorCode.SCHEDULE_NOT_FOUND]: "해당 일정을 찾을 수 없습니다.",
+  [ScheduleErrorCode.INVALID_TIME_ORDER]: "일정의 시작 시간이 종료 시간보다 늦을 수 없습니다.",
+  [ScheduleErrorCode.OVERLAP]: "일정이 겹칩니다.",
+  [ScheduleErrorCode.LIST_NOT_FOUND]: "일정 목록을 찾을 수 없습니다.",
+  [ScheduleErrorCode.CREATION_FAILED]: "일정 등록에 실패했습니다.",
+  [ScheduleErrorCode.UPDATE_FAILED]: "일정 수정에 실패했습니다.",
+  [ScheduleErrorCode.DELETION_FAILED]: "일정 삭제에 실패했습니다.",
+  [ScheduleErrorCode.NOT_FOUND]: "해당 일정을 찾을 수 없습니다.",
   [ScheduleErrorCode.SCHEDULE_INVALID_DATA]: "일정 데이터가 유효하지 않습니다.",
   [ScheduleErrorCode.INVALID_RESPONSE]: "서버 응답이 유효하지 않습니다.",
 
   // 기타
+  [GeneralErrorCode.INVALID_INPUT]: "입력이 유효하지 않습니다.",
   [GeneralErrorCode.INTERNAL_SERVER_ERROR]: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
   [GeneralErrorCode.UNKNOWN_ERROR]: "알 수 없는 오류가 발생했습니다.",
 };

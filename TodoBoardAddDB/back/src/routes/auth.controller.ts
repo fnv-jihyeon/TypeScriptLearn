@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { userDB, User } from "@/data/fakeUserDB";
 import { AuthErrorCode, GeneralErrorCode, ValidationErrorCode } from "@shared/constants/errorCodes";
 
 /**
@@ -313,4 +312,105 @@ export const checkSession = (req: Request, res: Response) => {
     return res.status(200).json({ success: true, user: req.session.user });
   }
   return res.status(200).json({ success: false, errorCode: AuthErrorCode.SESSION_EXPIRED });
+};
+
+/**
+ * @swagger
+ * /api/auth/change-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: 비밀번호 변경
+ *     description: 로그인된 사용자의 비밀번호를 변경합니다. (세션 쿠키 필요)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: secret12
+ *               newPassword:
+ *                 type: string
+ *                 example: newSecret34
+ *     responses:
+ *       200:
+ *         description: 변경 성공 또는 비밀번호 불일치
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                   nullable: true
+ *                   example: INVALID_CREDENTIALS
+ *       400:
+ *         description: 필수 입력 누락
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: REQUIRED_FIELD_MISSING
+ *       401:
+ *         description: 인증되지 않음(세션 없음)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Unauthorized
+ *       500:
+ *         description: 서버 오류
+ */
+export const changePassword = async (req: Request, res: Response) => {
+  if (!req.session.user) {
+    return res.status(401).json({ success: false, errorCode: AuthErrorCode.UNAUTHORIZED });
+  }
+
+  const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({
+      success: false,
+      errorCode: ValidationErrorCode.REQUIRED_FIELD_MISSING,
+    });
+  }
+
+  /**
+   * 현재 비밀번호와 새 비밀번호를 확인합니다.
+   */
+  const user = await prisma.user.findUnique({ where: { id: req.session.user.id } });
+
+  if (!user) {
+    return res.status(404).json({ success: false, errorCode: AuthErrorCode.USER_NOT_FOUND });
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ success: false, errorCode: AuthErrorCode.INVALID_CREDENTIALS });
+  }
+
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashedNewPassword },
+  });
+
+  return res.status(200).json({ success: true });
 };
